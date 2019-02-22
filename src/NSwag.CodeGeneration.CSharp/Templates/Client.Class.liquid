@@ -1,13 +1,13 @@
-[System.CodeDom.Compiler.GeneratedCode("NSwag", "{{ ToolchainVersion }}")]
+[GeneratedCode("NSwag", "{{ ToolchainVersion }}")]
 {{ ClientClassAccessModifier }} partial class {{ Class }} {% if HasBaseType %}: {% endif %}{% if HasBaseClass %}{{ BaseClass }}{% if GenerateClientInterfaces %}, {% endif %}{% endif %}{% if GenerateClientInterfaces %}I{{ Class }}{% endif %}
 {
 {% if UseBaseUrl and GenerateBaseUrlProperty -%}
-    private string _baseUrl = "{{ BaseUrl }}";
+    private String _baseUrl = "{{ BaseUrl }}";
 {% endif -%}
 {% if InjectHttpClient -%}
     private {{ HttpClientType }} _httpClient;
 {% endif -%}
-    private System.Lazy<Newtonsoft.Json.JsonSerializerSettings> _settings;
+    private Lazy<JsonSerializerSettings> _settings;
 
 {% if HasConfigurationClass -%}
     public {{ Class }}({{ ConfigurationClass }} configuration{% if InjectHttpClient %}, {{ HttpClientType }} httpClient{% endif %}) : base(configuration)
@@ -16,7 +16,7 @@
         _httpClient = httpClient; 
 {%     endif -%}
 {% elseif UseBaseUrl and HasBaseUrl == false -%}
-    public {{ Class }}(string baseUrl{% if InjectHttpClient -%}, {{ HttpClientType }} httpClient{% endif %})
+    public {{ Class }}(String baseUrl{% if InjectHttpClient -%}, {{ HttpClientType }} httpClient{% endif %})
     {
         BaseUrl = baseUrl; 
 {%     if InjectHttpClient -%}
@@ -30,11 +30,11 @@
     public {{ Class }}()
     {
 {% endif -%}
-        _settings = new System.Lazy<Newtonsoft.Json.JsonSerializerSettings>(() => 
+        _settings = new Lazy<JsonSerializerSettings>(() => 
         {
             var settings = {{ JsonSerializerParameterCode }};
 {% if SerializeTypeInformation -%}
-            settings.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto;
+            settings.TypeNameHandling = TypeNameHandling.Auto;
 {% endif -%}
             UpdateJsonSerializerSettings(settings);
             return settings;
@@ -42,28 +42,28 @@
     }
 
 {% if UseBaseUrl and GenerateBaseUrlProperty -%}
-    public string BaseUrl 
+    public String BaseUrl 
     {
         get { return _baseUrl; }
         set { _baseUrl = value; }
     }
 
 {% endif -%}
-    {% if ExposeJsonSerializerSettings %}public{% else %}protected{% endif %} Newtonsoft.Json.JsonSerializerSettings JsonSerializerSettings { get { return _settings.Value; } }
+    {% if ExposeJsonSerializerSettings %}public{% else %}protected{% endif %} JsonSerializerSettings JsonSerializerSettings { get { return _settings.Value; } }
 
 {% if GenerateUpdateJsonSerializerSettingsMethod -%}
-    partial void UpdateJsonSerializerSettings(Newtonsoft.Json.JsonSerializerSettings settings);
+    partial void UpdateJsonSerializerSettings(JsonSerializerSettings settings);
 {% endif -%}
-    partial void PrepareRequest({{ HttpClientType }} client, System.Net.Http.HttpRequestMessage request, string url);
-    partial void PrepareRequest({{ HttpClientType }} client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
-    partial void ProcessResponse({{ HttpClientType }} client, System.Net.Http.HttpResponseMessage response);
+    partial void PrepareRequest({{ HttpClientType }} client, HttpRequestMessage request, String url);
+    partial void PrepareRequest({{ HttpClientType }} client, HttpRequestMessage request, StringBuilder urlBuilder);
+    partial void ProcessResponse({{ HttpClientType }} client, HttpResponseMessage response);
 
 {% for operation in Operations -%}
 {%     if GenerateOptionalParameters == false -%}
     {% template Client.Method.Documentation %}
     {{ operation.MethodAccessModifier }} {{ operation.ResultType }} {{ operation.ActualOperationName }}Async({% for parameter in operation.Parameters %}{{ parameter.Type }} {{ parameter.VariableName }}{% if GenerateOptionalParameters and parameter.IsOptional %} = null{% endif %}{% if parameter.IsLast == false %}, {% endif %}{% endfor %})
     {
-        return {{ operation.ActualOperationName }}Async({% for parameter in operation.Parameters %}{{ parameter.VariableName }}, {% endfor %}System.Threading.CancellationToken.None);
+        return {{ operation.ActualOperationName }}Async({% for parameter in operation.Parameters %}{{ parameter.VariableName }}, {% endfor %}CancellationToken.None);
     }
 
 {%     endif -%}
@@ -71,13 +71,13 @@
     {% template Client.Method.Documentation %}
     {{ operation.MethodAccessModifier }} {{ operation.SyncResultType }} {{ operation.ActualOperationName }}({% for parameter in operation.Parameters %}{{ parameter.Type }} {{ parameter.VariableName }}{% if GenerateOptionalParameters and parameter.IsOptional %} = null{% endif %}{% if parameter.IsLast == false %}, {% endif %}{% endfor %})
     {
-        {% if operation.HasResult %}return {% endif %}System.Threading.Tasks.Task.Run(async () => await {{ operation.ActualOperationName }}Async({% for parameter in operation.Parameters %}{{ parameter.VariableName }}, {% endfor %}System.Threading.CancellationToken.None)).GetAwaiter().GetResult();
+        {% if operation.HasResult %}return {% endif %}Task.Run(async () => await {{ operation.ActualOperationName }}Async({% for parameter in operation.Parameters %}{{ parameter.VariableName }}, {% endfor %}CancellationToken.None)).GetAwaiter().GetResult();
     }
 
 {%     endif -%}
     {% template Client.Method.Documentation %}
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    {{ operation.MethodAccessModifier }} async {{ operation.ResultType }} {{ operation.ActualOperationName }}Async({% for parameter in operation.Parameters %}{{ parameter.Type }} {{ parameter.VariableName }}{% if GenerateOptionalParameters and parameter.IsOptional %} = null{% endif %}, {% endfor %}System.Threading.CancellationToken cancellationToken{% if GenerateOptionalParameters %} = default(System.Threading.CancellationToken){% endif %})
+    {{ operation.MethodAccessModifier }} async {{ operation.ResultType }} {{ operation.ActualOperationName }}Async({% for parameter in operation.Parameters %}{{ parameter.Type }} {{ parameter.VariableName }}{% if GenerateOptionalParameters and parameter.IsOptional %} = null{% endif %}, {% endfor %}CancellationToken cancellationToken{% if GenerateOptionalParameters %} = default(CancellationToken){% endif %})
     {
 {%     for parameter in operation.PathParameters -%}
 {%         if parameter.IsNullable == false and parameter.IsRequired -%}
@@ -93,14 +93,14 @@
 
 {%         endif -%}
 {%     endfor -%}
-        var urlBuilder_ = new System.Text.StringBuilder();
+        var urlBuilder_ = new StringBuilder();
         urlBuilder_.Append({% if UseBaseUrl %}BaseUrl != null ? BaseUrl.TrimEnd('/') : "").Append("/{% else %}"{% endif %}{{ operation.Path }}{% if operation.HasQueryParameters %}?{% endif %}");
 {%     for parameter in operation.PathParameters -%}
 {%         if parameter.IsOptional -%}
         if ({{ parameter.VariableName }} != null)
             {% template Client.Class.PathParameter %}
         else
-            urlBuilder_.Replace("/{{ "{" }}{{ parameter.Name }}}", string.Empty);
+            urlBuilder_.Replace("/{{ "{" }}{{ parameter.Name }}}", String.Empty);
 {%         else -%}
         {% template Client.Class.PathParameter %}
 {%         endif -%}
@@ -216,7 +216,7 @@
 
                 PrepareRequest(client_, request_, urlBuilder_);
                 var url_ = urlBuilder_.ToString();
-                request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+                request_.RequestUri = new Uri(url_, UriKind.RelativeOrAbsolute);
                 PrepareRequest(client_, request_, url_);
 
                 {% template Client.Class.BeforeSend %}
