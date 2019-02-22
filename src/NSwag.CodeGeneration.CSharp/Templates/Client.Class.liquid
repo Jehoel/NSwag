@@ -114,15 +114,13 @@
     {
 {%     for parameter in operation.PathParameters -%}
 {%         if parameter.IsNullable == false and parameter.IsRequired -%}
-        if ({{ parameter.VariableName }} == null)
-            throw new System.ArgumentNullException("{{ parameter.VariableName }}");
+        if ({{ parameter.VariableName }} == null) throw new ArgumentNullException("{{ parameter.VariableName }}");
 
 {%         endif -%}
 {%     endfor -%}
 {%     for parameter in operation.QueryParameters -%}
 {%         if parameter.IsNullable == false and parameter.IsRequired -%}
-        if ({{ parameter.VariableName }} == null)
-            throw new System.ArgumentNullException("{{ parameter.VariableName }}");
+        if ({{ parameter.VariableName }} == null) throw new ArgumentNullException("{{ parameter.VariableName }}");
 
 {%         endif -%}
 {%     endfor -%}
@@ -159,18 +157,19 @@
 {%     else -%}
         var client_ = new {{ HttpClientType }}();
 {%     endif -%}
-        try
+{%     if InjectHttpClient == false and DisposeHttpClient -%}
+        using (client_)
         {
+{%     endif -%}
 {%     if UseHttpRequestMessageCreationMethod -%}
             using (var request_ = await CreateHttpRequestMessageAsync(cancellationToken).ConfigureAwait(false))
 {%     else -%}
-            using (var request_ = new System.Net.Http.HttpRequestMessage())
+            using (var request_ = new HttpRequestMessage())
 {%     endif -%}
             {
 {%     for parameter in operation.HeaderParameters -%}
 {%         if parameter.IsRequired -%}
-                if ({{ parameter.VariableName }} == null)
-                    throw new System.ArgumentNullException("{{ parameter.VariableName }}");
+                if ({{ parameter.VariableName }} == null) throw new ArgumentNullException("{{ parameter.VariableName }}");
                 {% template Client.Class.HeaderParameter %}
 {%         else -%}
                 if ({{ parameter.VariableName }} != null)
@@ -179,40 +178,39 @@
 {%     endfor -%}
 {%     if operation.HasContent -%}
 {%         if operation.HasBinaryBodyParameter -%}
-                var content_ = new System.Net.Http.StreamContent({{ operation.ContentParameter.VariableName }});
+                HttpContent content_ = new StreamContent({{ operation.ContentParameter.VariableName }});
 {%         elseif operation.HasXmlBodyParameter -%}
-                var content_ = new System.Net.Http.StringContent({{ operation.ContentParameter.VariableName }});
+                HttpContent content_ = new StringContent({{ operation.ContentParameter.VariableName }});
 {%         else -%}
-                var content_ = new System.Net.Http.StringContent(Newtonsoft.Json.JsonConvert.SerializeObject({{ operation.ContentParameter.VariableName }}, {% if SerializeTypeInformation %}typeof({{ operation.ContentParameter.Type }}), {% endif %}_settings.Value));
+                HttpContent content_ = new StringContent(JsonConvert.SerializeObject({{ operation.ContentParameter.VariableName }}, {% if SerializeTypeInformation %}typeof({{ operation.ContentParameter.Type }}), {% endif %}_settings.Value));
 {%         endif -%}
-                content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("{{ operation.Consumes }}");
+                content_.Headers.ContentType = MediaTypeHeaderValue.Parse("{{ operation.Consumes }}");
                 request_.Content = content_;
 {%     else -%}
 {%         if operation.HasFormParameters -%}
 {%             if operation.ConsumesFormUrlEncoded -%}
-                var keyValues_ = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, string>>();
+                var keyValues_ = new List<KeyValuePair<string, string>>();
 {%                 for parameter in operation.FormParameters -%}
 {%                     if parameter.IsNullable -%}
                 if ({{ parameter.VariableName }} != null)
 {%                     else -%}
                 if ({{ parameter.VariableName }} == null)
-                    throw new System.ArgumentNullException("{{ parameter.VariableName }}");
+                    throw new ArgumentNullException("{{ parameter.VariableName }}");
                 else
 {%                     endif -%}
-                    keyValues_.Add(new System.Collections.Generic.KeyValuePair<string, string>("{{ parameter.Name }}", ConvertToString({{ parameter.VariableName }}, System.Globalization.CultureInfo.InvariantCulture)));
+                    keyValues_.Add(new KeyValuePair<string, string>("{{ parameter.Name }}", ConvertToString({{ parameter.VariableName }}, System.Globalization.CultureInfo.InvariantCulture)));
 {%                 endfor -%}
-                request_.Content = new System.Net.Http.FormUrlEncodedContent(keyValues_);
+                request_.Content = new FormUrlEncodedContent(keyValues_);
 {%             else -%}
-                var boundary_ = System.Guid.NewGuid().ToString();
-                var content_ = new System.Net.Http.MultipartFormDataContent(boundary_);
+                var boundary_ = Guid.NewGuid().ToString();
+                HttpContent content_ = new MultipartFormDataContent(boundary_);
                 content_.Headers.Remove("Content-Type");
                 content_.Headers.TryAddWithoutValidation("Content-Type", "multipart/form-data; boundary=" + boundary_);
 {%                 for parameter in operation.FormParameters -%}
 {%                     if parameter.IsNullable -%}
                 if ({{ parameter.VariableName }} != null)
 {%                     else -%}
-                if ({{ parameter.VariableName }} == null)
-                    throw new System.ArgumentNullException("{{ parameter.VariableName }}");
+                if ({{ parameter.VariableName }} == null) throw new ArgumentNullException("{{ parameter.VariableName }}");
                 else
 {%                     endif -%}
                 {
@@ -220,105 +218,106 @@
 {%                         if parameter.IsArray -%}
                     foreach (var item_ in {{ parameter.VariableName }})
                     {
-                        var content_{{ parameter.VariableName }}_ = new System.Net.Http.StreamContent(item_.Data);
+                        var content_{{ parameter.VariableName }}_ = new StreamContent(item_.Data);
                         if (!string.IsNullOrEmpty(item_.ContentType))
-                            content_{{ parameter.VariableName }}_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(item_.ContentType);
+                            content_{{ parameter.VariableName }}_.Headers.ContentType = MediaTypeHeaderValue.Parse(item_.ContentType);
                         content_.Add(content_{{ parameter.VariableName }}_, "{{ parameter.Name }}", item_.FileName ?? "{{ parameter.Name }}");
                     }
 {%                         else -%}
-                    var content_{{ parameter.VariableName }}_ = new System.Net.Http.StreamContent({{ parameter.VariableName }}.Data);
+                    HttpContent content_{{ parameter.VariableName }}_ = new StreamContent({{ parameter.VariableName }}.Data);
                     if (!string.IsNullOrEmpty({{ parameter.VariableName }}.ContentType))
-                        content_{{ parameter.VariableName }}_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse({{ parameter.VariableName }}.ContentType);
+                        content_{{ parameter.VariableName }}_.Headers.ContentType = MediaTypeHeaderValue.Parse({{ parameter.VariableName }}.ContentType);
                     content_.Add(content_{{ parameter.VariableName }}_, "{{ parameter.Name }}", {{ parameter.VariableName }}.FileName ?? "{{ parameter.Name }}");
 {%                         endif -%}
 {%                     else -%}
-                    content_.Add(new System.Net.Http.StringContent(ConvertToString({{ parameter.VariableName }}, System.Globalization.CultureInfo.InvariantCulture)), "{{ parameter.Name }}");
+                    content_.Add(new StringContent(ConvertToString({{ parameter.VariableName }}, CultureInfo.InvariantCulture)), "{{ parameter.Name }}");
 {%                     endif -%}
                 }
 {%                 endfor -%}
                 request_.Content = content_;
-{%             endif -%}
 {%         elseif operation.IsGetOrDeleteOrHead == false -%}
-                request_.Content = new System.Net.Http.StringContent(string.Empty, System.Text.Encoding.UTF8, "{{ operation.Produces }}");
+                request_.Content = new StringContent(String.Empty, Encoding.UTF8, "{{ operation.Produces }}");
 {%         endif -%}
 {%     endif -%}
-                request_.Method = new System.Net.Http.HttpMethod("{{ operation.HttpMethodUpper | upcase }}");
+                request_.Method = new HttpMethod("{{ operation.HttpMethodUpper | upcase }}");
 {%     if operation.HasResultType and operation.HasAcceptHeaderParameterParameter == false -%}
-                request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("{{ operation.Produces }}"));
+                request_.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("{{ operation.Produces }}"));
 {%     endif -%}
 
                 PrepareRequest(client_, request_, urlBuilder_);
-                var url_ = urlBuilder_.ToString();
+                String url_ = urlBuilder_.ToString();
                 request_.RequestUri = new Uri(url_, UriKind.RelativeOrAbsolute);
                 PrepareRequest(client_, request_, url_);
 
                 {% template Client.Class.BeforeSend %}
-                var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-                try
+                try // https://stackoverflow.com/questions/40677708/which-exceptions-can-httpclient-throw
                 {
-                    var headers_ = System.Linq.Enumerable.ToDictionary(response_.Headers, h_ => h_.Key, h_ => h_.Value);
-                    if (response_.Content != null && response_.Content.Headers != null)
+                    using (HttpResponseMessage response_ = await client_.SendAsync(request_, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false))
                     {
-                        foreach (var item_ in response_.Content.Headers)
-                            headers_[item_.Key] = item_.Value;
-                    }
+                        var headers_ = Enumerable.ToDictionary(response_.Headers, h_ => h_.Key, h_ => h_.Value);
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
 
-                    ProcessResponse(client_, response_);
+                        ProcessResponse(client_, response_);
 
-                    var status_ = ((int)response_.StatusCode).ToString();
+                        Int32 status_ = (Int32)response_.StatusCode;
 {%     for response in operation.Responses -%}
-                    if (status_ == "{{ response.StatusCode }}"{% if response.CheckChunkedStatusCode %} || status_ == "206"{% endif %}) 
-                    {
-                        {% template Client.Class.ProcessResponse %}
-                    }
-                    else
+                        {% if forloop.first != true %}else {% endif %}if (status_ == {{ response.StatusCode }}{% if response.CheckChunkedStatusCode %} || status_ == 206{% endif %}) 
+                        {
+                            {% template Client.Class.ProcessResponse %}
+                        }
 {%     endfor -%}
 {%     if operation.HasDefaultResponse -%}
 {%         if operation.DefaultResponse.HasType -%}
-                    {
+                        {
 {%             assign response = operation.DefaultResponse -%}
-                        {% template Client.Class.ProcessResponse %}
-                    }
+                            {% template Client.Class.ProcessResponse %}
+                        }
 {%         elseif operation.HasSuccessResponse -%}
-                    {
-                        var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false); 
-                        throw new {{ ExceptionClass }}("{{ operation.DefaultResponse.ExceptionDescription }}", (int)response_.StatusCode, responseData_, headers_, null);
-                    }
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false); 
+                            throw new {{ ExceptionClass }}("{{ operation.DefaultResponse.ExceptionDescription }}", reason: ClientExceptionReason.ExpectedError, (Int32)response_.StatusCode, responseData_, headers_, null);
+                        }
 {%         endif -%}
 {%     else -%}
-                    if (status_ != "200" && status_ != "204")
-                    {
-                        var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false); 
-                        throw new {{ ExceptionClass }}("The HTTP status code of the response was not expected (" + (int)response_.StatusCode + ").", (int)response_.StatusCode, responseData_, headers_, null);
-                    }
+                        {% if operation.Responses.size > 0 %}else {% endif %}if (status_ >= 500 && status_ < 600)
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false); 
+                            throw new ResponseDeserializationException("A HTTP server error status code was received (" + (Int32)response_.StatusCode + ").", reason: ClientExceptionReason.InternalServerError, (Int32)response_.StatusCode, responseData_, headers_, null);
+                        }
+                        {% if operation.Responses.size > 0 %}else {% endif %}if (status_ != 200 && status_ != 204)
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false); 
+                            throw new ResponseDeserializationException("The HTTP status code of the response was not expected (" + (Int32)response_.StatusCode + ").", reason: ClientExceptionReason.UnexpectedHttpStatusCode, (Int32)response_.StatusCode, responseData_, headers_, null);
+                        }
 {%     endif -%}
 {%     if operation.HasDefaultResponse == false or (operation.DefaultResponse.HasType == false and operation.HasSuccessResponse == false) -%}
 {%         if operation.HasResultType -%}
-        
 {%             if operation.WrapResponse and operation.UnwrappedResultType != "FileResponse" -%}
-                    return new {{ ResponseClass }}<{{ operation.UnwrappedResultType }}>((int)response_.StatusCode, headers_, default({{ operation.UnwrappedResultType }})); 
+                        return new {{ ResponseClass }}<{{ operation.UnwrappedResultType }}>((Int32)response_.StatusCode, headers_, default({{ operation.UnwrappedResultType }})); 
 {%             else -%}
-                    return default({{ operation.UnwrappedResultType }});
+                        return default({{ operation.UnwrappedResultType }});
 {%             endif -%}
 {%         elseif operation.WrapResponse -%}
 
-                    return new {{ ResponseClass }}((int)response_.StatusCode, headers_); 
+                        return new {{ ResponseClass }}((Int32)response_.StatusCode, headers_); 
 {%         endif -%}
 {%     endif -%}
+                    }
                 }
-                finally
+                catch (TaskCanceledException taskEx)
                 {
-                    if (response_ != null)
-                        response_.Dispose();
+                    // https://stackoverflow.com/questions/12666922/distinguish-timeout-from-user-cancellation
+                    throw new NSwagClientException("HTTP request timed-out or was canceled by the user.", reason: ClientExceptionReason.TimeoutOrCanceled, inner: taskEx);
+                }
+                catch (HttpRequestException httpEx)
+                {
+                    throw new NSwagClientException("HTTP request encountered a network error or unexpected response.", reason: ClientExceptionReason.HttpError, inner: httpEx);
                 }
             }
-        }
-        finally
-        {
-{%     if InjectHttpClient == false and DisposeHttpClient -%}
-            if (client_ != null)
-                client_.Dispose();
-{%     endif -%}
         }
     }
 
