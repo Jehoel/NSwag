@@ -1,14 +1,15 @@
-private String ConvertToString(Object value, CultureInfo cultureInfo)
+private static String ConvertToString(Object value, CultureInfo cultureInfo)
 {
-    if (value is System.Enum)
+    if (value is Enum e)
     {
-        String name = System.Enum.GetName(value.GetType(), value);
+        Type enumType = value.GetType();
+        String name = Enum.GetName(enumType, e);
         if (name != null)
         {
-            var field = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
+            var field = IntrospectionExtensions.GetTypeInfo(enumType).GetDeclaredField(name);
             if (field != null)
             {
-                var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field, typeof(System.Runtime.Serialization.EnumMemberAttribute)) as System.Runtime.Serialization.EnumMemberAttribute;
+                var attribute = CustomAttributeExtensions.GetCustomAttribute(field, typeof(EnumMemberAttribute)) as EnumMemberAttribute;
                 if (attribute != null)
                 {
                     return attribute.Value;
@@ -18,12 +19,12 @@ private String ConvertToString(Object value, CultureInfo cultureInfo)
     }
     else if (value is Byte[] bytes)
     {
-        return System.Convert.ToBase64String(bytes);
+        return Convert.ToBase64String(bytes);
     }
     else if (value != null && value.GetType().IsArray)
     {
-        var array = Enumerable.OfType<object>((System.Array) value);
-        return String.Join(",", Enumerable.Select(array, o => ConvertToString(o, cultureInfo)));
+        IEnumerable<String> ies = ((Array)value).OfType<Object>().Select( o => ConvertToString( o, cultureInfo ) );
+        return String.Join( ",", ies );
     }
 
     return Convert.ToString(value, cultureInfo);

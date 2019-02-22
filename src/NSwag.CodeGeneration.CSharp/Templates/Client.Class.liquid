@@ -58,38 +58,38 @@
     partial void PrepareRequest({{ HttpClientType }} client, HttpRequestMessage request, StringBuilder urlBuilder);
     partial void ProcessResponse({{ HttpClientType }} client, HttpResponseMessage response);
 
-	protected virtual async Task<(T,String)> ReadObjectResponseAsync<T>( HttpResponseMessage response, IReadOnlyDictionary<String,IEnumerable<String>> responseHeadersAsDictionary )
-	{
+    protected virtual async Task<(T,String)> ReadObjectResponseAsync<T>( HttpResponseMessage response, IReadOnlyDictionary<String,IEnumerable<String>> responseHeadersAsDictionary )
+    {
 #if !DEBUG
-		String objectBodyAsString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-		try
-		{
-			T typedBody = JsonConvert.DeserializeObject<T>( objectBodyAsString, this.JsonSerializerSettings );
-			return ( typedBody, objectBodyAsString );
-		}
-		catch ( JsonException ex )
-		{
-			throw new ResponseDeserializationException("Could not deserialize the response body.", reason: ClientExceptionReason.JsonDeserializationError, (Int32)response.StatusCode, objectBodyAsString, responseHeadersAsDictionary, ex);
-		}
+        String objectBodyAsString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        try
+        {
+            T typedBody = JsonConvert.DeserializeObject<T>( objectBodyAsString, this.JsonSerializerSettings );
+            return ( typedBody, objectBodyAsString );
+        }
+        catch ( JsonException ex )
+        {
+            throw new ResponseDeserializationException("Could not deserialize the response body.", reason: ClientExceptionReason.JsonDeserializationError, (Int32)response.StatusCode, objectBodyAsString, responseHeadersAsDictionary, ex);
+        }
 #else
-		try
-		{
-			using( Stream responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false) )
-			using( StreamReader streamReader = new StreamReader( responseStream ) )
-			using( JsonTextReader jsonTextReader = new JsonTextReader( streamReader ) )
-			{
-				JsonSerializer serializer = JsonSerializer.Create( this.JsonSerializerSettings );
+        try
+        {
+            using( Stream responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false) )
+            using( StreamReader streamReader = new StreamReader( responseStream ) )
+            using( JsonTextReader jsonTextReader = new JsonTextReader( streamReader ) )
+            {
+                JsonSerializer serializer = JsonSerializer.Create( this.JsonSerializerSettings );
 
-				T responseBody = serializer.Deserialize<T>( jsonTextReader );
-				return ( responseBody, null );
-			}
-		}
-		catch( JsonException ex )
-		{
-			throw new ResponseDeserializationException( "Could not deserialize the response body as " + typeof(T).FullName + ".", reason: ClientExceptionReason.JsonDeserializationError, (Int32)response.StatusCode, null, responseHeadersAsDictionary, ex );
-		}
+                T responseBody = serializer.Deserialize<T>( jsonTextReader );
+                return ( responseBody, null );
+            }
+        }
+        catch( JsonException ex )
+        {
+            throw new ResponseDeserializationException( "Could not deserialize the response body as " + typeof(T).FullName + ".", reason: ClientExceptionReason.JsonDeserializationError, (Int32)response.StatusCode, null, responseHeadersAsDictionary, ex );
+        }
 #endif
-	}
+    }
 
 {% for operation in Operations -%}
 {%     if GenerateOptionalParameters == false -%}
