@@ -60,7 +60,7 @@
 
     protected virtual async Task<(T,String)> ReadObjectResponseAsync<T>( HttpResponseMessage response, IReadOnlyDictionary<String,IEnumerable<String>> responseHeadersAsDictionary )
     {
-#if !DEBUG
+#if DEBUG
         String objectBodyAsString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         try
         {
